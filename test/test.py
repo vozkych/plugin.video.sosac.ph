@@ -15,3 +15,5 @@ sub = {'name': str_as_bytes, 'refresh': True, 'type': 'movie', 'last_run': time.
 sub['last_run'] = time.time()
 print(sub)
 print(sub['non_exist'] if 'non_exist' in sub else None)
+print("Downloading %s%%" % 15 + ' - %s KB/s %s' % (3.14, 45))
+print("Downloading {0:d}%".format(15) + ' - {0} KB/s {1}'.format(3.14, 45))

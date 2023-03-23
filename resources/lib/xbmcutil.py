@@ -435,7 +435,7 @@ def download(addon, filename, url, local, notifyFinishDialog=True, headers={}):
     def encode(string):
         return u' '.join(string).encode('utf-8')
 
-    def notify(title, message, time=3000):
+    def notify(title, message, time=10000):
         try:
             xbmcgui.Dialog().notification(encode(title), encode(message), time=time, icon=icon,
                                           sound=False)
@@ -452,8 +452,7 @@ def download(addon, filename, url, local, notifyFinishDialog=True, headers={}):
                 esTime = '%ss' % est
                 if est > 60:
                     esTime = '%sm' % int(est / 60)
-                message = xbmc.getLocalizedString(
-                    24042) % percent + ' - %s KB/s %s' % (speed, esTime)
+                message = xbmc.getLocalizedString(24042).format(percent) + ' - {0} KB/s {1}'.format(speed, esTime)
                 notify(message, filename)
 
     downloader = Downloader(callback)
