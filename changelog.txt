@@ -1,3 +1,8 @@
+[B]2.0.2:[/B] 20. 03. 2023
+- Fix for Add TV show to library
+- Fix for notification in Download feature
+- Fixed version of common.plugin.cache dependency
+
 [B]2.0.1:[/B] 19. 03. 2023
 - Fix for Add movie to library
 - Fix for Download feature
