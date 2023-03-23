@@ -1,3 +1,7 @@
+[B]2.0.1:[/B] 19. 03. 2023
+- Fix for Add movie to library
+- Fix for Download feature
+
 [B]2.0.0:[/B] 24. 02. 2021
 - Upgrade python version to 3.0.0
 - Integrate resolver library to addon structure

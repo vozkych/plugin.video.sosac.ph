@@ -418,7 +418,7 @@ def download(addon, filename, url, local, notifyFinishDialog=True, headers={}):
         util.info('Downloading %s to %s' % (url, local))
     except:
         util.info('Downloading ' + url)
-    local = xbmc.makeLegalFilename(local)
+    local = xbmcvfs.makeLegalFilename(local)
     try:
         filename = util.replace_diacritic(util.decode_html(filename))
     except:
@@ -483,10 +483,9 @@ class Downloader(object):
         self.percent = -1
 
     def download(self, remote, local, filename=None, headers={}):
-        class MyURLopener(urllib.FancyURLopener):
-
+        class MyURLopener(urllib.request.FancyURLopener):
             def http_error_default(self, url, fp, errcode, errmsg, headers):
-                self.error_msg = 'Downlad failed, error : ' + str(errcode)
+                self.error_msg = 'Download failed, error : ' + str(errcode)
 
         if not filename:
             filename = os.path.basename(local)

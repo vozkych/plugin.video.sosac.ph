@@ -45,8 +45,9 @@ class XBMCSosac(xbmcprovider.XBMCMultiResolverContentProvider):
         validFilenameChars = "-_.() %s%s" % (string.ascii_letters, string.digits)
         if (validChars is not None):
             validFilenameChars = validChars
+        validFilenameCharsEnc = validFilenameChars.encode("UTF-8")
         cleanedFilename = self.encode(name)
-        return ''.join(c for c in cleanedFilename if c in validFilenameChars)
+        return ''.join(chr(c) for c in cleanedFilename if c in validFilenameCharsEnc)
 
     def service(self):
         util.info("SOSAC Service Started")
@@ -158,23 +159,25 @@ class XBMCSosac(xbmcprovider.XBMCMultiResolverContentProvider):
         error = False
         if not 'refresh' in params:
             params['refresh'] = str(self.getSetting("refresh_time"))
-        sub = {'name': params['name'], 'refresh': params[
-            'refresh'], 'type': params['type']}
 
-        sub['last_run'] = time.time()
+        sub = {'name': params['name'], 'refresh': params['refresh'], 'type': params['type'], 'last_run': time.time()}
+        if 'imdb' in params:
+            sub['imdb'] = params['imdb']
         arg = {"play": params['url'], 'cp': 'sosac.ph', "title": sub['name']}
-        item_url = xbmcutil._create_plugin_url(
-            arg, 'plugin://' + self.addon_id + '/')
+
+        # item name was previously encoded to go through Kodi
+        item_name = params['name'].decode('utf-8')
+        item_normalized_name = self.normalize_filename(item_name)
+        item_url = xbmcutil._create_plugin_url(arg, 'plugin://' + self.addon_id + '/')
         util.info("item: " + item_url + " | " + str(params))
         new_items = False
-        # self.showNotification('Linking', params['name'])
+        # self.showNotification('Linking', item_name)
 
         if params['type'] == sosac.LIBRARY_TYPE_VIDEO:
             # movies are not stored in subs database
             item_dir = self.getSetting('library-movies')
 
-            nfo_file = os.path.join(item_dir, self.normalize_filename(
-                sub['name']), self.normalize_filename(params['name']) + '.nfo')
+            nfo_file = os.path.join(item_dir, item_normalized_name, item_normalized_name + '.nfo')
             if not xbmcvfs.exists(nfo_file):
                 metadata = ""
                 if ('imdb' in params and params['imdb'] and not
@@ -187,11 +190,11 @@ class XBMCSosac(xbmcprovider.XBMCMultiResolverContentProvider):
                     self.add_item_to_library(nfo_file, metadata)
 
             (error, new_items) = self.add_item_to_library(
-                os.path.join(item_dir, self.normalize_filename(sub['name']),
-                             self.normalize_filename(params['name'])) + '.strm', item_url)
+                os.path.join(item_dir, item_normalized_name, item_normalized_name) + '.strm',
+                     item_url)
         elif params['type'] == sosac.LIBRARY_TYPE_TVSHOW:
             if not ('notify' in params):
-                self.showNotification(sub['name'], 'Checking new content')
+                self.showNotification(item_name, 'Checking new content')
 
             subs = self.get_subs()
             item_dir = self.getSetting('library-tvshows')
@@ -199,7 +202,7 @@ class XBMCSosac(xbmcprovider.XBMCMultiResolverContentProvider):
             subs.update({params['url']: sub})
             self.set_subs(subs)
             # self.addon.setSetting('tvshows-subs', json.dumps(subs))
-            nfo_file = os.path.join(item_dir, self.normalize_filename(params['name']), 'tvshow.nfo')
+            nfo_file = os.path.join(item_dir, item_normalized_name, 'tvshow.nfo')
             if not xbmcvfs.exists(nfo_file):
                 metadata = ""
                 if ('imdb' in params and params['imdb'] and not
@@ -208,7 +211,7 @@ class XBMCSosac(xbmcprovider.XBMCMultiResolverContentProvider):
                 if ('csfd' in params and params['csfd'] and not
                         re.match('^$|^[?0]$', params['csfd'])):
                     metadata += "http://www.csfd.cz/film/{0}\n".format(params['csfd'])
-                tvid = self.getTVDB(params['name'], params['imdb'])
+                tvid = self.getTVDB(item_name, params['imdb'] if 'imdb' in params else None)
                 if tvid:
                     metadata += "http://thetvdb.com/index.php?tab=series&id={0}\n".format(tvid)
                 if metadata != "":
@@ -223,16 +226,16 @@ class XBMCSosac(xbmcprovider.XBMCMultiResolverContentProvider):
                 dirname = "Season " + str(itm['season'])
                 epname = "S%02dE%02d.strm" % (itm['season'], itm['episode'])
                 filename = os.path.join(item_dir, self.normalize_filename(
-                    params['name']), dirname, epname)
+                    item_name), dirname, epname)
                 (err, new) = self.add_item_to_library(filename, item_url)
                 error |= err
                 if new is True and not err:
                     new_items = True
         if not error and new_items and not ('update' in params) and not ('notify' in params):
-            self.showNotification(params['name'], 'Found new content')
+            self.showNotification(item_name, 'Found new content')
             xbmc.executebuiltin('UpdateLibrary(video)')
         elif not error and not ('notify' in params):
-            self.showNotification(params['name'], 'No new content')
+            self.showNotification(item_name, 'No new content')
         if error and not ('notify' in params):
             self.showNotification('Failed, Please check kodi logs', 'Linking')
         return new_items
@@ -245,8 +248,7 @@ class XBMCSosac(xbmcprovider.XBMCMultiResolverContentProvider):
                 if params['url'] in subs.keys():
                     del subs[params['url']]
                     self.set_subs(subs)
-                    self.showNotification(
-                        params['name'], 'Removed from subscriptions')
+                    self.showNotification(params['name'].decode('utf-8'), 'Removed from subscriptions')
                     xbmc.executebuiltin('Container.Refresh')
                 return False
 
@@ -360,7 +362,7 @@ class XBMCSosac(xbmcprovider.XBMCMultiResolverContentProvider):
 
     @staticmethod
     def encode(string):
-        return unicodedata.normalize('NFKD', string.decode('utf-8')).encode('ascii', 'ignore')
+        return unicodedata.normalize('NFKD', string).encode('ascii', 'ignore')
 
     def addon_dir(self):
         return self.addon.getAddonInfo('path')

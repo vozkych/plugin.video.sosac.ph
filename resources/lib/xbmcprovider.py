@@ -164,7 +164,7 @@ class XBMContentProvider(object):
     def download(self, item):
         downloads = self.settings['downloads']
         if '' == downloads:
-            xbmcgui.Dialog().ok(self.provider.name, xbmcutil.__lang__(30009))
+            xbmcgui.Dialog().ok(self.provider.name, xbmcutil.__lang__(30031))
             return
         stream = self.resolve(item['url'])
         if stream:
@@ -181,7 +181,7 @@ class XBMContentProvider(object):
                 # name does not contain extension, append some
                 name += '.mp4'
             xbmcutil.download(self.addon, name, self.provider._url(
-                stream['url']), os.path.join(downloads, name), headers=stream['headers'])
+                stream['url'].decode("utf-8")), os.path.join(downloads, name), headers=stream['headers'])
 
     def play(self, item):
         stream = self.resolve(item['url'])
