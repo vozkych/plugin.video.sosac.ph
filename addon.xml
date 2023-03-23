@@ -1,8 +1,8 @@
 <?xml version='1.0' encoding='utf-8'?>
-<addon id="plugin.video.sosac.ph" name="Sosáč" provider-name="Blue ClouDragon" version="2.0.1">
+<addon id="plugin.video.sosac.ph" name="Sosáč" provider-name="Blue ClouDragon" version="2.0.2">
     <requires>
         <import addon="xbmc.python" version="3.0.0" />
-        <import addon="script.common.plugin.cache" version="2.5.0" />
+        <import addon="script.common.plugin.cache" version="2.6.3" />
     </requires>
     <extension library="default.py" point="xbmc.python.pluginsource" provides="video">
         <provides>video</provides>
