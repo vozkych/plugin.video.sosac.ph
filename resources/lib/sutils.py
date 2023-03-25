@@ -115,7 +115,7 @@ class XBMCSosac(xbmcprovider.XBMCMultiResolverContentProvider):
                                 'type': sosac.LIBRARY_TYPE_TVSHOW,
                                 'update': True,
                                 'url': url,
-                                'name': sub['name'],
+                                'name': sub['name'] if isinstance(sub['name'], str) else sub['name'].decode('utf-8'),
                                 'refresh': sub['refresh']
                             })
                             self.sleep(3000)
@@ -165,8 +165,7 @@ class XBMCSosac(xbmcprovider.XBMCMultiResolverContentProvider):
             sub['imdb'] = params['imdb']
         arg = {"play": params['url'], 'cp': 'sosac.ph', "title": sub['name']}
 
-        # item name was previously encoded to go through Kodi
-        item_name = params['name'].decode('utf-8')
+        item_name = params['name']
         item_normalized_name = self.normalize_filename(item_name)
         item_url = xbmcutil._create_plugin_url(arg, 'plugin://' + self.addon_id + '/')
         util.info("item: " + item_url + " | " + str(params))
@@ -225,8 +224,7 @@ class XBMCSosac(xbmcprovider.XBMCMultiResolverContentProvider):
                     arg, 'plugin://' + self.addon_id + '/')
                 dirname = "Season " + str(itm['season'])
                 epname = "S%02dE%02d.strm" % (itm['season'], itm['episode'])
-                filename = os.path.join(item_dir, self.normalize_filename(
-                    item_name), dirname, epname)
+                filename = os.path.join(item_dir, item_normalized_name, dirname, epname)
                 (err, new) = self.add_item_to_library(filename, item_url)
                 error |= err
                 if new is True and not err:
@@ -248,7 +246,7 @@ class XBMCSosac(xbmcprovider.XBMCMultiResolverContentProvider):
                 if params['url'] in subs.keys():
                     del subs[params['url']]
                     self.set_subs(subs)
-                    self.showNotification(params['name'].decode('utf-8'), 'Removed from subscriptions')
+                    self.showNotification(params['name'], 'Removed from subscriptions')
                     xbmc.executebuiltin('Container.Refresh')
                 return False
 

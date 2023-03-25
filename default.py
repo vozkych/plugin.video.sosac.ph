@@ -26,7 +26,6 @@ from resources.lib.sosac import SosacContentProvider
 from resources.lib.sutils import XBMCSosac
 from resources.lib import util
 
-
 __scriptid__ = 'plugin.video.sosac.ph'
 __scriptname__ = 'sosac.ph'
 __addon__ = xbmcaddon.Addon(__scriptid__)

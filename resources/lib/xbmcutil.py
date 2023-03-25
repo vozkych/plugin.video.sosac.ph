@@ -29,7 +29,6 @@ import traceback
 import http.cookiejar
 import time
 import socket
-import unicodedata
 import xbmcgui
 import xbmcplugin
 import xbmc
@@ -44,7 +43,8 @@ UA = 'Mozilla/6.0 (Windows; U; Windows NT 5.1; en-GB; rv:1.9.0.5) Gecko/20080924
 
 sys.path.append(os.path.join(os.path.dirname(__file__), 'usage'))
 
-__addon__ = xbmcaddon.Addon('plugin.video.sosac.ph')
+__scriptid__ = 'plugin.video.sosac.ph'
+__addon__ = xbmcaddon.Addon(__scriptid__)
 __lang__ = __addon__.getLocalizedString
 
 
@@ -199,45 +199,61 @@ def init_usage_reporting(addonid):
     utmain.main({'do': 'reg', 'id': addonid})
 
 
-def save_to_file(url, file, headers=None):
+def compat_path(path):
+    if not sys.platform.startswith('win'):
+        if isinstance(path, str):
+            return path.encode('utf-8')
+
+    return path
+
+
+def download_subtitles(url, headers=None, name=None, path=None):
+    if url == None or url == '':
+        raise RuntimeError("Can't download undefined subtitles")
+
+    util.info("Downloading subtitles from '%s'" % url)
+    # define vfs and device paths to download folder
+    virt_path = ('special://temp/%s' % __scriptid__) if (path == None or path == '') else path
+    real_path = xbmcvfs.translatePath(virt_path)
+    # make the device path existing
+    real_path_compat = compat_path(real_path) # is it needed?
+    if not os.path.exists(real_path_compat):
+        os.makedirs(real_path_compat)
+    # compute the subtitle filename
+    filename = ('xbmc_subs%s.srt' % int(time.time())) if (name == None or name == '') else ('%s.srt' % name)
+    # append filename to vfs and device paths
+    virt_path = xbmcvfs.makeLegalFilename(xbmcvfs.validatePath('%s/%s' % (virt_path,filename)))
+    real_path = xbmcvfs.makeLegalFilename(os.path.join(real_path, filename))
+    # download and write the subtitle file
     try:
-        f = open(compat_path(file), 'w', encoding="utf-8")
-        f.write(request(url, headers))
-        f.flush()
-        os.fsync(f.fileno())
-        f.close()
-        return True
+        subtitles = request(url, headers)
+        util.info("Storing subtitles to '%s'" % real_path)
+        fo = open(compat_path(real_path), 'w', encoding='utf-8')
+        fo.write(subtitles)
+        fo.flush()
+        os.fsync(fo.fileno())
+        fo.close()
     except:
         traceback.print_exc()
+        util.error("Failed to download subtitles from '%s' or store them to '%s'!" % (url,real_path))
+        return None,None
+
+    return virt_path,real_path
 
 
 def set_subtitles(listItem, url, headers=None):
-    if not (url == '' or url == None):
-        util.info('Downloading subtitles')
-        local = xbmcvfs.translatePath(__addon__.getAddonInfo('path'))
-        c_local = compat_path(local)
-        if not os.path.exists(c_local):
-            os.makedirs(c_local)
-        local = os.path.join(local, 'xbmc_subs' + str(int(time.time())) + '.srt')
-        util.info('Saving subtitles as %s' % local)
-        if not save_to_file(url, local, headers):
-            util.error('Failed to store subtitles!')
+    if not (url == None or url == ''):
+        virt_path,real_path = download_subtitles(url, headers)
+        if (virt_path == None):
             return
-        util.info('Setting subtitles to playable item')
-        listItem.setSubtitles([local.encode('utf-8')])
+        util.info("Setting subtitles from '%s' to playable item" % url)
+        listItem.setSubtitles([virt_path])
 
 
 def load_subtitles(url, headers=None):
-    util.info('Downloading subtitles and load them to player...')
-    if not (url == '' or url == None):
-        local = xbmcvfs.translatePath(__addon__.getAddonInfo('path'))
-        c_local = compat_path(local)
-        if not os.path.exists(c_local):
-            os.makedirs(c_local)
-        local = os.path.join(local, 'xbmc_subs' + str(int(time.time())) + '.srt')
-        util.info('Saving subtitles as %s' % local)
-        if not save_to_file(url, local, headers):
-            util.error('Failed to store subtitles!')
+    if not (url == None or url == ''):
+        virt_path,real_path = download_subtitles(url, headers)
+        if (virt_path == None):
             return
         player = xbmc.Player()
         count = 0
@@ -246,10 +262,10 @@ def load_subtitles(url, headers=None):
             count += 1
             xbmc.sleep(200)
             if count > max_count - 2:
-                util.info("Cannot load subtitles, player timed out")
+                util.warn("Cannot load subtitles, player timed out")
                 return
-        player.setSubtitles(local.encode('utf-8'))
-        util.info('Subtitles loaded to player')
+        util.info("Loading subtitles from '%s' to player" % url)
+        player.setSubtitles(virt_path)
 
 
 def _substitute_entity(match):
@@ -552,13 +568,3 @@ def replace_diacritic(string):
         else:
             ret.append(char)
     return ''.join(ret)
-
-
-def compat_path(path):
-    if sys.platform.startswith('win'):
-        if isinstance(path, str):
-            path = path
-    else:
-        if isinstance(path, str):
-            path = path.encode('utf-8')
-    return path

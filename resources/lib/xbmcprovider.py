@@ -174,14 +174,10 @@ class XBMContentProvider(object):
             # clean up \ and /
             name = item['title'].replace('/', '_').replace('\\', '_')
             if not stream['subs'] == '':
-                xbmcutil.save_to_file(stream['subs'], os.path.join(
-                    downloads, name + '.srt'), stream['headers'])
-            dot = name.find('.')
-            if dot <= 0:
-                # name does not contain extension, append some
-                name += '.mp4'
-            xbmcutil.download(self.addon, name, self.provider._url(
-                stream['url'].decode("utf-8")), os.path.join(downloads, name), headers=stream['headers'])
+                xbmcutil.download_subtitles(stream['subs'], stream['headers'], name, downloads)
+            # name does not contain extension, append some
+            name += '.mp4'
+            xbmcutil.download(self.addon, name, self.provider._url(stream['url']), xbmcvfs.makeLegalFilename(os.path.join(downloads, name)), headers=stream['headers'])
 
     def play(self, item):
         stream = self.resolve(item['url'])
@@ -190,7 +186,7 @@ class XBMContentProvider(object):
             if 'headers' in stream.keys():
                 headerStr = '|' + urllib.parse.urlencode(stream['headers'])
                 if len(headerStr) > 1:
-                    stream['url'] = stream['url'].decode("utf-8") + headerStr
+                    stream['url'] = stream['url'] + headerStr
             print('Sending %s to player' % stream['url'])
             li = xbmcgui.ListItem(path=stream['url'])
             li.setArt({'icon': 'DefaulVideo.png'})
@@ -198,7 +194,7 @@ class XBMContentProvider(object):
             if len(il) > 0:  # only set when something was extracted
                 li.setInfo('video', il)
             try:
-                local_subs = xbmcutil.set_subtitles(li, stream['subs'], stream.get('headers'))
+                xbmcutil.set_subtitles(li, stream['subs'], stream.get('headers'))
             except:
                 xbmcplugin.setResolvedUrl(int(sys.argv[1]), True, li)
                 xbmcutil.load_subtitles(stream['subs'], stream.get('headers'))
@@ -422,7 +418,7 @@ class XBMCLoginOptionalDelayedContentProvider(XBMCLoginOptionalContentProvider):
 
     def wait_cb(self, wait):
         left = wait
-        msg = xbmcutil.__lang__(30014).encode('utf-8')
+        msg = xbmcutil.__lang__(30014)
         while left > 0:
             xbmc.executebuiltin("XBMC.Notification(%s,%s,1000,%s)" %
                                 (self.provider.name, msg % str(left), ''))

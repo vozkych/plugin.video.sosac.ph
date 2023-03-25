@@ -316,7 +316,7 @@ class SosacContentProvider(ContentProvider):
             item['url'] = serial['l']
             item['year'] = int(serial['y'])
             if DESCRIPTION in serial:
-                item['plot'] = serial[DESCRIPTION].encode('utf-8')
+                item['plot'] = serial[DESCRIPTION]
             if RATING in serial:
                 item['rating'] = serial[RATING] * RATING_STEP
             if item['url'] in subs:
@@ -426,7 +426,7 @@ class SosacContentProvider(ContentProvider):
     def get_library_video_name(self, video):
         name = self.get_localized_name(video['n'])
         year = (" (" + video['y'] + ")") if video['y'] else " "
-        return (name + year).encode('utf-8')
+        return (name + year)
 
     def get_episode_recently_name(self, episode):
         serial = self.get_localized_name(episode['t']) + ': '
@@ -473,7 +473,7 @@ class SosacContentProvider(ContentProvider):
 
         r = urllib.request.urlopen(urllib.request.Request(result['url'], headers=result['headers']))
         if r.code == 200:
-            result['url'] = r.read()
+            result['url'] = r.read().decode('utf-8')
         return result
 
     def set_streamujtv_info(self, stream):
