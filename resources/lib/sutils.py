@@ -255,12 +255,11 @@ class XBMCSosac(xbmcprovider.XBMCMultiResolverContentProvider):
                     xbmc.executebuiltin('Container.Refresh')
                     return True
                 return False
-            if params['action'] == sosac.LIBRARY_ACTION_REMOVE_ALL:
+            if params['action'] == sosac.LIBRARY_ACTION_REMOVE_ALL_SUBSCRIPTION:
                 self.set_subs({})
+                self.showNotification('Sosac', 'All subscriptions successfully removed')
                 return True
             if params['action'] == sosac.LIBRARY_ACTION_ADD_ALL:
-                self.dialog.create("Sosac", "Adding All Movies to library")
-                self.dialog.update(0)
                 if params['type'] == sosac.LIBRARY_TYPE_ALL_VIDEOS:
                     self.dialog.create("Sosac", "Adding All Movies to library")
                     self.dialog.update(0)
@@ -277,7 +276,23 @@ class XBMCSosac(xbmcprovider.XBMCMultiResolverContentProvider):
                             item["type"] = sosac.LIBRARY_TYPE_VIDEO
                             self.add_item(item)
                     self.dialog.close()
-                if params['type'] == sosac.LIBRARY_TYPE_RECENT_VIDEOS:
+                elif params['type'] == sosac.LIBRARY_TYPE_SELECTED_VIDEOS:
+                    self.dialog.create("Sosac", "Adding Selected (%s) Movies to library" % params['name'])
+                    self.dialog.update(0)
+                    videos = self.provider.library_list_selected_videos(params['url'])
+                    for video in videos:
+                        if self.dialog.iscanceled():
+                            return
+                        if 'progress' in video:
+                            self.dialog.update(video['progress'])
+                        else:
+                            item = video['menu'][sosac.LIBRARY_MENU_ITEM_ADD]
+                            item["update"] = True
+                            item["notify"] = True
+                            item["type"] = sosac.LIBRARY_TYPE_VIDEO
+                            self.add_item(item)
+                    self.dialog.close()
+                elif params['type'] == sosac.LIBRARY_TYPE_RECENT_VIDEOS:
                     self.dialog.create("Sosac", "Adding Recent Movies to library")
                     self.dialog.update(0)
                     videos = self.provider.library_list_recent_videos()
@@ -294,8 +309,7 @@ class XBMCSosac(xbmcprovider.XBMCMultiResolverContentProvider):
                             self.add_item(item)
                     self.dialog.close()
                 elif params['type'] == sosac.LIBRARY_TYPE_ALL_SHOWS:
-                    self.dialog.create(
-                        "Sosac", "Adding All TV Shows to library")
+                    self.dialog.create("Sosac", "Adding All TV Shows to library")
                     self.dialog.update(0)
                     shows = self.provider.library_list_all_tvshows()
                     for show in shows:

@@ -96,11 +96,12 @@ LIBRARY_MENU_ITEM_REMOVE_ALL = "[B][COLOR red]Remove all subscriptions[/COLOR][/
 LIBRARY_TYPE_VIDEO = "video"
 LIBRARY_TYPE_TVSHOW = "tvshow"
 LIBRARY_TYPE_ALL_VIDEOS = "all-videos"
+LIBRARY_TYPE_SELECTED_VIDEOS = "selected-videos"
 LIBRARY_TYPE_RECENT_VIDEOS = "recent-videos"
 LIBRARY_TYPE_ALL_SHOWS = "all-shows"
 LIBRARY_ACTION_ADD = "add-to-library"
 LIBRARY_ACTION_ADD_ALL = "add-all-to-library"
-LIBRARY_ACTION_REMOVE_ALL = "remove-all-from-library"
+LIBRARY_ACTION_REMOVE_ALL_SUBSCRIPTION = "remove-all-subscription"
 LIBRARY_ACTION_REMOVE_SUBSCRIPTION = "remove-subscription"
 LIBRARY_FLAG_IS_PRESENT = "[B][COLOR yellow]*[/COLOR][/B] "
 
@@ -159,6 +160,10 @@ class SosacContentProvider(ContentProvider):
             LIBRARY_MENU_ITEM_ADD_ALL: {
                 'action': LIBRARY_ACTION_ADD_ALL,
                 'type': LIBRARY_TYPE_ALL_SHOWS
+            },
+            LIBRARY_MENU_ITEM_REMOVE_ALL: {
+                'action': LIBRARY_ACTION_REMOVE_ALL_SUBSCRIPTION,
+                'type': LIBRARY_TYPE_ALL_SHOWS
             }
         }
         result.append(item)
@@ -187,9 +192,6 @@ class SosacContentProvider(ContentProvider):
         for item in result:
             if 'menu' not in item:
                 item['menu'] = {}
-            item['menu'][LIBRARY_MENU_ITEM_REMOVE_ALL] = {
-                'action': LIBRARY_ACTION_REMOVE_ALL
-            }
 
         item = self.item_with_last_mod("TV Shows - Recently added", URL + J_TV_SHOWS_RECENTLY_ADDED)
         result.append(item)
@@ -259,11 +261,20 @@ class SosacContentProvider(ContentProvider):
         for key, value in json_list.items():
             item = self.dir_item(title=key.title())
             item['url'] = value
+            item['menu'] = {
+                LIBRARY_MENU_ITEM_ADD_ALL: {
+                    'url': item['url'],
+                    'type': LIBRARY_TYPE_SELECTED_VIDEOS,
+                    'action': LIBRARY_ACTION_ADD_ALL,
+                    'name': item['title']
+                }
+            }
             result.append(item)
 
         return sorted(result, key=lambda i: i['title'])
 
     def list_videos(self, url, filter=None, order_by=0, library=False):
+        util.info("Listing videos from URL '%s'%s" % (url,(' to Library' if library else '')))
         result = []
         data = util.request(url)
         json_video_array = json.loads(data)
@@ -392,30 +403,39 @@ class SosacContentProvider(ContentProvider):
         letters = self.load_json_list(URL + J_MOVIES_A_TO_Z_TYPE)
         total = len(letters)
 
-        step = int(100 / total)
+        step = 100 / total
         for idx, letter in enumerate(letters):
             for video in self.list_videos(letter['url'], filter=filter, library=True):
                 yield video
-            yield {'progress': step * (idx + 1)}
+            yield {'progress': int(step * (idx + 1))}
+
+    def library_list_selected_videos(self, url, filter=None):
+        videos = self.list_videos(url, filter, library=True)
+        total = len(videos)
+
+        step = 100 / total
+        for idx, video in enumerate(videos):
+            yield video
+            yield {'progress': int(step * (idx + 1))}
 
     def library_list_recent_videos(self, filter=None):
         videos = self.list_videos(URL + J_MOVIES_RECENTLY_ADDED, filter, library=True)
         total = len(videos)
 
-        step = int(100 / total)
+        step = 100 / total
         for idx, video in enumerate(videos):
             yield video
-            yield {'progress': step * (idx + 1)}
+            yield {'progress': int(step * (idx + 1))}
 
     def library_list_all_tvshows(self):
         letters = self.a_to_z(J_TV_SHOWS)
         total = len(letters)
 
-        step = int(100 / total)
+        step = 100 / total
         for idx, letter in enumerate(letters):
             for video in self.list_series_letter(letter['url'], False):
                 yield video
-            yield {'progress': step * (idx + 1)}
+            yield {'progress': int(step * (idx + 1))}
 
     def get_video_name(self, video):
         name = self.get_localized_name(video['n'])
